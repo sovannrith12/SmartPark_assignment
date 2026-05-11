@@ -66,7 +66,18 @@ public class ParkingFeeCalculatorTests
     #region Duration Rounding
     // Test how partial hours are rounded for billing
     #endregion
+    [Fact]
+    public void CalculateFee_Rounding_31Min_Returns1HourFee()
+    {
+        // 31 minutes should count as 1 full hour after 30-min grace period
+        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+        var checkOut = checkIn.AddMinutes(31);
 
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut);
+
+        // Expected: 1,000 KHR (Car rate is 1000/hr)
+        Assert.Equal(1000m, result.TotalFee);
+    }
     #region Daily Cap
     // Test that fees respect maximum daily limits per vehicle type
     #endregion
