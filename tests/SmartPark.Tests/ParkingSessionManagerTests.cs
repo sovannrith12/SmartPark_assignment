@@ -92,10 +92,17 @@ public class ParkingSessionManagerTests
     public async Task CheckOutAsync_SuccessfulPayment_UpdatesTicketAndNotifies()
     {
         var ticketId = "TKT-001";
-        var ticket = new ParkingTicket { Id = ticketId, IsActive = true, Vehicle = new Vehicle { Type = VehicleType.Car } };
+        // Fixing 'Id' to match your model (likely empty or different name)
+        // and setting CheckInTime so it's 'Active'
+        var ticket = new ParkingTicket
+        {
+            CheckInTime = DateTime.Now.AddHours(-1),
+            Vehicle = new Vehicle { Type = VehicleType.Car }
+        };
 
         _repoStub.Setup(r => r.GetTicketByIdAsync(ticketId)).ReturnsAsync(ticket);
         _paymentStub.Setup(p => p.ProcessPaymentAsync(ticketId, It.IsAny<decimal>())).ReturnsAsync(true);
+        _dateTimeStub.Setup(d => d.Now).Returns(DateTime.Now);
 
         await _manager.CheckOutAsync(ticketId, "012345678");
 
@@ -109,14 +116,18 @@ public class ParkingSessionManagerTests
     public async Task CheckOutAsync_PaymentFails_DoesNotUpdateRepository()
     {
         var ticketId = "TKT-FAIL";
-        var ticket = new ParkingTicket { Id = ticketId, IsActive = true, Vehicle = new Vehicle { Type = VehicleType.Car } };
+        var ticket = new ParkingTicket
+        {
+            CheckInTime = DateTime.Now.AddHours(-1),
+            Vehicle = new Vehicle { Type = VehicleType.Car }
+        };
 
         _repoStub.Setup(r => r.GetTicketByIdAsync(ticketId)).ReturnsAsync(ticket);
         _paymentStub.Setup(p => p.ProcessPaymentAsync(ticketId, It.IsAny<decimal>())).ReturnsAsync(false);
+        _dateTimeStub.Setup(d => d.Now).Returns(DateTime.Now);
 
         await Assert.ThrowsAsync<Exception>(() => _manager.CheckOutAsync(ticketId, "012345678"));
 
-        // Ensure we didn't accidentally save the ticket if money wasn't paid
         _repoStub.Verify(r => r.UpdateTicketAsync(It.IsAny<ParkingTicket>()), Times.Never);
     }
     #region CheckOut — Notification Failure
@@ -126,19 +137,21 @@ public class ParkingSessionManagerTests
     public async Task CheckOutAsync_NotificationFails_StillCompletesSuccessfully()
     {
         var ticketId = "TKT-NOTIFY-FAIL";
-        var ticket = new ParkingTicket { Id = ticketId, IsActive = true, Vehicle = new Vehicle { Type = VehicleType.Car } };
+        var ticket = new ParkingTicket
+        {
+            CheckInTime = DateTime.Now.AddHours(-1),
+            Vehicle = new Vehicle { Type = VehicleType.Car }
+        };
 
         _repoStub.Setup(r => r.GetTicketByIdAsync(ticketId)).ReturnsAsync(ticket);
         _paymentStub.Setup(p => p.ProcessPaymentAsync(ticketId, It.IsAny<decimal>())).ReturnsAsync(true);
+        _dateTimeStub.Setup(d => d.Now).Returns(DateTime.Now);
 
-        // Simulate notification service crashing
         _notificationStub.Setup(n => n.SendReceiptAsync(It.IsAny<string>(), It.IsAny<string>()))
                          .ThrowsAsync(new Exception("SMS Provider Down"));
 
-        // Act
         var result = await _manager.CheckOutAsync(ticketId, "012345678");
 
-        // Assert: The method should NOT throw an error because of the try-catch in Step 9
         Assert.NotNull(result);
         _repoStub.Verify(r => r.UpdateTicketAsync(ticket), Times.Once);
     }
