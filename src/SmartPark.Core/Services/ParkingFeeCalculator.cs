@@ -104,5 +104,22 @@ public class ParkingFeeCalculator
             BaseFee = baseFee,
             TotalFee = baseFee
         };
+
+        decimal overnightFee = 0;
+        // Step 5: Overnight (+2,000 KHR if spans past 22:00)
+        if (checkOut.Hour >= OvernightHourThreshold || (checkOut.Date > checkIn.Date))
+        {
+            overnightFee = OvernightFlatFee;
+        }
+
+        // Step 9 (Draft): Summing it up
+        decimal finalTotal = baseFee + overnightFee;
+
+        return new ParkingFeeResult
+        {
+            BaseFee = baseFee,
+            OvernightFee = overnightFee,
+            TotalFee = finalTotal
+        };
     }
 }
