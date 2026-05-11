@@ -52,27 +52,29 @@ public class ParkingFeeCalculator
     ///   8. Lost ticket: +20,000 KHR (not subject to discounts)
     ///   9. Total: baseFee + surcharge − discount + overnight + penalty (min 0)
     /// </remarks>
-    public ParkingFeeResult CalculateFee(
-        VehicleType vehicleType,
-        MembershipTier membership,
-        DateTime checkIn,
-        DateTime checkOut,
-        bool isLostTicket = false,
-        bool isHoliday = false)
+    public ParkingFeeResult CalculateFee(...)
     {
         var duration = checkOut - checkIn;
 
-        // Step 2: Grace period (≤ 30 min = free)
         if (duration.TotalMinutes <= GracePeriodMinutes && !isLostTicket)
         {
             return new ParkingFeeResult { BaseFee = 0, TotalFee = 0 };
         }
 
-        decimal baseFee = 0;
-        if (vehicleType == VehicleType.Motorcycle)
+        // NEW ROUNDING LOGIC
+        var billableMinutes = duration.TotalMinutes - GracePeriodMinutes;
+        var billableHours = (int)Math.Ceiling(billableMinutes / 60.0);
+        if (billableHours < 1) billableHours = 1;
+
+        decimal hourlyRate = vehicleType switch
         {
-            baseFee = (decimal)duration.TotalHours * MotorcycleRatePerHour;
-        }
+            VehicleType.Motorcycle => MotorcycleRatePerHour,
+            VehicleType.Car => CarRatePerHour,
+            VehicleType.SUV => SuvRatePerHour,
+            _ => 0
+        };
+
+        decimal baseFee = billableHours * hourlyRate;
 
         return new ParkingFeeResult { BaseFee = baseFee, TotalFee = baseFee };
     }
