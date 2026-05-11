@@ -168,4 +168,28 @@ public class ParkingSessionManagerTests
     #region Verify Interaction Order
     // Verify that dependencies are called in the correct sequence
     #endregion
+    [Fact]
+    public async Task CheckOutAsync_ShouldFollowStrictSequence()
+    {
+        // Arrange
+        var ticketId = "SEQ-123";
+        var ticket = new ParkingTicket
+        {
+            CheckInTime = DateTime.Now.AddHours(-1),
+            Vehicle = new Vehicle { Type = VehicleType.Car }
+        };
+        var sequence = new MockSequence();
+
+        // We set up the mocks in the EXACT order they must be called
+        _repoStub.InSequence(sequence).Setup(r => r.GetTicketByIdAsync(ticketId)).ReturnsAsync(ticket);
+        _paymentStub.InSequence(sequence).Setup(p => p.ProcessPaymentAsync(ticketId, It.IsAny<decimal>())).ReturnsAsync(true);
+        _repoStub.InSequence(sequence).Setup(r => r.UpdateTicketAsync(ticket)).Returns(Task.CompletedTask);
+        _notificationStub.InSequence(sequence).Setup(n => n.SendReceiptAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+
+        // Act
+        await _manager.CheckOutAsync(ticketId, "012345678");
+
+        // Assert
+        // If the order is wrong, InSequence will throw an exception and the test will fail.
+    }
 }
