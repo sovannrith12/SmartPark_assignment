@@ -60,20 +60,20 @@ public class ParkingFeeCalculator
         bool isLostTicket = false,
         bool isHoliday = false)
     {
-        // Step 1: Simple duration calculation
         var duration = checkOut - checkIn;
-        decimal baseFee = 0;
 
-        // Implementation for Motorcycle
+        // Step 2: Grace period (≤ 30 min = free)
+        if (duration.TotalMinutes <= GracePeriodMinutes && !isLostTicket)
+        {
+            return new ParkingFeeResult { BaseFee = 0, TotalFee = 0 };
+        }
+
+        decimal baseFee = 0;
         if (vehicleType == VehicleType.Motorcycle)
         {
             baseFee = (decimal)duration.TotalHours * MotorcycleRatePerHour;
         }
 
-        return new ParkingFeeResult
-        {
-            BaseFee = baseFee,
-            TotalFee = baseFee
-        };
+        return new ParkingFeeResult { BaseFee = baseFee, TotalFee = baseFee };
     }
 }
