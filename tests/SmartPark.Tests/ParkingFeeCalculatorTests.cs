@@ -183,4 +183,61 @@ public class ParkingFeeCalculatorTests
     // Write at least 5 FsCheck properties that must hold for ALL valid inputs
     // You may need custom Arbitrary<T> for generating valid DateTime pairs
     #endregion
+    [Property(DisplayName = "Fee is never negative")]
+    public bool Property_FeeIsNeverNegative(int vehicleTypeInt, int membershipInt, DateTime checkIn, int stayMinutes)
+    {
+        // Setup: Ensure we have valid enum values and a positive duration
+        var vehicle = (VehicleType)(Math.Abs(vehicleTypeInt) % 3);
+        var tier = (MembershipTier)(Math.Abs(membershipInt) % 4);
+        var checkOut = checkIn.AddMinutes(Math.Abs(stayMinutes) % 10000); // Up to ~1 week stay
+
+        var result = _calculator.CalculateFee(vehicle, tier, checkIn, checkOut);
+
+        return result.TotalFee >= 0;
+    }
+
+    [Property(DisplayName = "Lost ticket is always >= base penalty")]
+    public bool Property_LostTicketPenaltyAlwaysApplied(DateTime checkIn, int stayMinutes)
+    {
+        var checkOut = checkIn.AddMinutes(Math.Abs(stayMinutes) % 1440); // Stay within 1 day
+
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut, isLostTicket: true);
+
+        // Even with 0 stay time, a lost ticket must be at least 20,000 KHR
+        return result.TotalFee >= 20000m;
+    }
+
+    [Property(DisplayName = "Grace period (<=30m) is always free for guests")]
+    public bool Property_GracePeriodIsAlwaysFree(DateTime checkIn, int minutes)
+    {
+        // Generate stay between 0 and 30 minutes
+        int stay = Math.Abs(minutes) % 31;
+        var checkOut = checkIn.AddMinutes(stay);
+
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut, isLostTicket: false);
+
+        return result.TotalFee == 0;
+    }
+
+    [Property(DisplayName = "Membership discount never increases price")]
+    public bool Property_DiscountNeverIncreasesPrice(DateTime checkIn, int stayMinutes)
+    {
+        var checkOut = checkIn.AddMinutes(Math.Abs(stayMinutes) % 1440);
+
+        var guestResult = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut);
+        var platinumResult = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Platinum, checkIn, checkOut);
+
+        return platinumResult.TotalFee <= guestResult.TotalFee;
+    }
+
+    [Property(DisplayName = "SUV fee is always >= Motorcycle fee for same duration")]
+    public bool Property_VehicleRankOrder(DateTime checkIn, int stayMinutes)
+    {
+        var checkOut = checkIn.AddMinutes(Math.Abs(stayMinutes) % 1440);
+
+        var moto = _calculator.CalculateFee(VehicleType.Motorcycle, MembershipTier.Guest, checkIn, checkOut);
+        var suv = _calculator.CalculateFee(VehicleType.SUV, MembershipTier.Guest, checkIn, checkOut);
+
+        return suv.TotalFee >= moto.TotalFee;
+    }
 }
