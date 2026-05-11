@@ -60,20 +60,9 @@ public class ParkingFeeCalculator
         bool isLostTicket = false,
         bool isHoliday = false)
     {
-        // Step 1: Simple duration calculation
-        var duration = checkOut - checkIn;
-        decimal baseFee = 0;
-
-        // Implementation for Motorcycle
-        if (vehicleType == VehicleType.Motorcycle)
-        {
-            baseFee = (decimal)duration.TotalHours * MotorcycleRatePerHour;
-        }
-
-        return new ParkingFeeResult
-        {
-            BaseFee = baseFee,
-            TotalFee = baseFee
-        };
+        // TODO: Implement the 9-step fee calculation using TDD.
+        // Write a failing test first (RED), then implement just enough to pass (GREEN).
+        throw new NotImplementedException(
+            "Implement this method using TDD — see the assignment spec for the 9-step calculation flow.");
     }
 }
