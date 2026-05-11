@@ -52,20 +52,30 @@ public class ParkingFeeCalculator
     ///   8. Lost ticket: +20,000 KHR (not subject to discounts)
     ///   9. Total: baseFee + surcharge − discount + overnight + penalty (min 0)
     /// </remarks>
-    public ParkingFeeResult CalculateFee(...)
+    public ParkingFeeResult CalculateFee(
+    VehicleType vehicleType,
+    MembershipTier membership,
+    DateTime checkIn,
+    DateTime checkOut,
+    bool isLostTicket = false,
+    bool isHoliday = false)
     {
         var duration = checkOut - checkIn;
 
+        // Step 2: Grace period (≤ 30 min = free)
+        // IMPORTANT: Per spec, grace period only applies if the ticket is NOT lost
         if (duration.TotalMinutes <= GracePeriodMinutes && !isLostTicket)
         {
             return new ParkingFeeResult { BaseFee = 0, TotalFee = 0 };
         }
 
-        // NEW ROUNDING LOGIC
+        // Step 3: Duration Rounding (The "Ceiling" rule)
+        // We subtract grace period then round up to the nearest hour (minimum 1)
         var billableMinutes = duration.TotalMinutes - GracePeriodMinutes;
         var billableHours = (int)Math.Ceiling(billableMinutes / 60.0);
         if (billableHours < 1) billableHours = 1;
 
+        // Step 4: Base fee calculation with Hourly Rates
         decimal hourlyRate = vehicleType switch
         {
             VehicleType.Motorcycle => MotorcycleRatePerHour,
@@ -76,6 +86,23 @@ public class ParkingFeeCalculator
 
         decimal baseFee = billableHours * hourlyRate;
 
-        return new ParkingFeeResult { BaseFee = baseFee, TotalFee = baseFee };
+        // Apply Daily Cap per vehicle type
+        decimal dailyCap = vehicleType switch
+        {
+            VehicleType.Motorcycle => MotorcycleDailyCap,
+            VehicleType.Car => CarDailyCap,
+            VehicleType.SUV => SuvDailyCap,
+            _ => decimal.MaxValue
+        };
+
+        if (baseFee > dailyCap) baseFee = dailyCap;
+
+        // Right now, we haven't implemented Overnight, Surcharges, or Discounts yet.
+        // So for the current 8-commit state, we return this:
+        return new ParkingFeeResult
+        {
+            BaseFee = baseFee,
+            TotalFee = baseFee
+        };
     }
 }
