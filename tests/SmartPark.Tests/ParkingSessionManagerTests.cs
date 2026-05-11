@@ -173,11 +173,18 @@ public class ParkingSessionManagerTests
     {
         // Arrange
         var ticketId = "SEQ-123";
+        var now = new DateTime(2026, 5, 11, 12, 0, 0); // Fixed "Now" time
+        var checkIn = now.AddHours(-1); // 11:00 AM
+
         var ticket = new ParkingTicket
         {
-            CheckInTime = DateTime.Now.AddHours(-1),
-            Vehicle = new Vehicle { Type = VehicleType.Car }
+            CheckInTime = checkIn,
+            Vehicle = new Vehicle { Type = VehicleType.Car, Membership = MembershipTier.Guest }
         };
+
+        // We MUST tell the stub what time it is now so it's not earlier than check-in
+        _dateTimeStub.Setup(d => d.Now).Returns(now);
+
         var sequence = new MockSequence();
 
         // We set up the mocks in the EXACT order they must be called
@@ -190,6 +197,6 @@ public class ParkingSessionManagerTests
         await _manager.CheckOutAsync(ticketId, "012345678");
 
         // Assert
-        // If the order is wrong, InSequence will throw an exception and the test will fail.
+        // The test passes if no sequence or argument exceptions are thrown.
     }
 }
