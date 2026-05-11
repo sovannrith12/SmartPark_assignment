@@ -32,7 +32,21 @@ public class ParkingFeeCalculatorTests
     // Test basic hourly rates for each vehicle type
     // Consider using [Theory] with [InlineData] for multiple scenarios
     #endregion
+    [Fact]
+    public void CalculateFee_Motorcycle_2Hours_Returns1000()
+    {
+        // Arrange
+        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0); // Monday
+        var checkOut = checkIn.AddHours(2);
+        var vehicle = VehicleType.Motorcycle;
+        var tier = MembershipTier.Guest;
 
+        // Act
+        var result = _calculator.CalculateFee(vehicle, tier, checkIn, checkOut);
+
+        // Assert
+        Assert.Equal(1000m, result.TotalFee);
+    }
     #region Grace Period
     // Test the free parking window and its boundaries
     #endregion
