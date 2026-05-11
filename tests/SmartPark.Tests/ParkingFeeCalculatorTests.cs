@@ -141,7 +141,17 @@ public class ParkingFeeCalculatorTests
     #region Membership Discounts
     // Test discount tiers and what amounts they apply to
     #endregion
+    [Fact]
+    public void CalculateFee_GoldMember_Applies25PercentDiscount()
+    {
+        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0); // Monday
+        var checkOut = checkIn.AddHours(2); // Car: 2000 base
 
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Gold, checkIn, checkOut);
+
+        // Expected: 1,500 KHR (2000 - 500 discount)
+        Assert.Equal(1500m, result.TotalFee);
+    }
     #region Lost Ticket
     // Test the penalty and how it interacts with other fee modifiers
     #endregion
