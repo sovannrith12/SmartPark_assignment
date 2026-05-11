@@ -117,8 +117,27 @@ public class ParkingFeeCalculator
             overnightFee = OvernightFlatFee;
         }
 
-        // Step 9 (Draft): Summing it up
-        decimal finalTotal = baseFee + overnightFee;
+        // Step 6: Surcharge (Weekend +20% OR Holiday +50%)
+        bool isWeekend = checkIn.DayOfWeek == DayOfWeek.Saturday || checkIn.DayOfWeek == DayOfWeek.Sunday;
+        decimal surchargeRate = 0;
+        if (isHoliday) surchargeRate = HolidaySurchargeRate;
+        else if (isWeekend) surchargeRate = WeekendSurchargeRate;
+
+        decimal surcharge = baseFee * surchargeRate;
+
+        // Step 7: Membership Discount
+        decimal discountRate = membership switch
+        {
+            MembershipTier.Silver => SilverDiscountRate,
+            MembershipTier.Gold => GoldDiscountRate,
+            MembershipTier.Platinum => PlatinumDiscountRate,
+            _ => 0
+        };
+
+        decimal discount = (baseFee + surcharge) * discountRate;
+
+        // Step 9: Final Total
+        decimal finalTotal = baseFee + surcharge - discount + overnightFee + penalty;
 
         return new ParkingFeeResult
         {
