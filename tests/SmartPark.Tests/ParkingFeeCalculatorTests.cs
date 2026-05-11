@@ -139,7 +139,15 @@ public class ParkingFeeCalculatorTests
     #region Edge Cases
     // Test invalid inputs and boundary conditions
     #endregion
+    [Fact]
+    public void CalculateFee_CheckOutBeforeCheckIn_ThrowsArgumentException()
+    {
+        var checkIn = new DateTime(2026, 3, 16, 12, 0, 0);
+        var checkOut = new DateTime(2026, 3, 16, 10, 0, 0); // 2 hours early!
 
+        Assert.Throws<ArgumentException>(() =>
+            _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut));
+    }
     #region Property-Based Tests
     // Write at least 5 FsCheck properties that must hold for ALL valid inputs
     // You may need custom Arbitrary<T> for generating valid DateTime pairs
