@@ -142,8 +142,11 @@ public class ParkingFeeCalculator
         return new ParkingFeeResult
         {
             BaseFee = baseFee,
+            SurchargeFee = surcharge,
+            DiscountAmount = discount,
             OvernightFee = overnightFee,
-            TotalFee = finalTotal
+            PenaltyFee = penalty,
+            TotalFee = Math.Max(0, finalTotal) // Rule 9: Min 0
         };
 
         // Step 8: Lost ticket penalty
