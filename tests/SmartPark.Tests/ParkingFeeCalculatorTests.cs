@@ -112,7 +112,18 @@ public class ParkingFeeCalculatorTests
     #region Weekend Surcharge
     // Test the percentage-based surcharge on specific days
     #endregion
+    [Fact]
+    public void CalculateFee_Weekend_Adds20PercentSurcharge()
+    {
+        // Saturday, March 21st, 2026
+        var checkIn = new DateTime(2026, 3, 21, 10, 0, 0);
+        var checkOut = checkIn.AddHours(2); // Car: 2000 base
 
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut);
+
+        // Expected: 2,400 KHR (2000 + 400 surcharge)
+        Assert.Equal(2400m, result.TotalFee);
+    }
     #region Holiday Surcharge
     // Test holiday pricing and its interaction with weekend pricing
     #endregion
