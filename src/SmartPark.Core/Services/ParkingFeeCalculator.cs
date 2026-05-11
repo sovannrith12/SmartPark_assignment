@@ -60,6 +60,11 @@ public class ParkingFeeCalculator
     bool isLostTicket = false,
     bool isHoliday = false)
     {
+        if (checkOut < checkIn)
+        {
+            throw new ArgumentException("Check-out time cannot be before check-in time.");
+        }
+
         var duration = checkOut - checkIn;
 
         // Step 2: Grace period (≤ 30 min = free)
