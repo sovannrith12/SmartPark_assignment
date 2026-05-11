@@ -95,7 +95,20 @@ public class ParkingFeeCalculatorTests
     #region Overnight Fee
     // Test the flat fee applied for sessions that extend into late hours
     #endregion
+    [Fact]
+    public void CalculateFee_Overnight_SpansPast10PM_Adds2000()
+    {
+        // Monday 8 PM to 11 PM (3 hours)
+        // Car rate: 1000/hr * 3 = 3000
+        // Should add +2000 because it passes 10 PM
+        var checkIn = new DateTime(2026, 3, 16, 20, 0, 0);
+        var checkOut = new DateTime(2026, 3, 16, 23, 0, 0);
 
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut);
+
+        // Expected: 5,000 KHR (3000 base + 2000 overnight)
+        Assert.Equal(5000m, result.TotalFee);
+    }
     #region Weekend Surcharge
     // Test the percentage-based surcharge on specific days
     #endregion
