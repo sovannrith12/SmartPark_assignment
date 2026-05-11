@@ -53,46 +53,39 @@ public class ParkingFeeCalculator
     ///   9. Total: baseFee + surcharge − discount + overnight + penalty (min 0)
     /// </remarks>
     public ParkingFeeResult CalculateFee(
-    VehicleType vehicleType,
-    MembershipTier membership,
-    DateTime checkIn,
-    DateTime checkOut,
-    bool isLostTicket = false,
-    bool isHoliday = false)
+        VehicleType vehicleType,
+        MembershipTier membership,
+        DateTime checkIn,
+        DateTime checkOut,
+        bool isLostTicket = false,
+        bool isHoliday = false)
     {
+        // 1. Validate
         if (checkOut < checkIn)
-        {
-            throw new ArgumentException("Check-out time cannot be before check-in time.");
-        }
+            throw new ArgumentException("Check-out before check-in.");
 
         var duration = checkOut - checkIn;
 
-        // Step 2: Grace period (≤ 30 min = free)
-        // IMPORTANT: Per spec, grace period only applies if the ticket is NOT lost
+        // 2. Grace period (30 min)
         if (duration.TotalMinutes <= GracePeriodMinutes && !isLostTicket)
         {
-            return new ParkingFeeResult { BaseFee = 0, TotalFee = 0 };
+            return new ParkingFeeResult { TotalFee = 0 };
         }
 
-        // Step 3: Duration Rounding (The "Ceiling" rule)
-        // We subtract grace period then round up to the nearest hour (minimum 1)
+        // 3. Duration Rounding
         var billableMinutes = duration.TotalMinutes - GracePeriodMinutes;
         var billableHours = (int)Math.Ceiling(billableMinutes / 60.0);
         if (billableHours < 1) billableHours = 1;
 
-        // Step 4: Base fee calculation with Hourly Rates
-        decimal hourlyRate = vehicleType switch
+        // 4. Base Fee & Cap
+        decimal rate = vehicleType switch
         {
             VehicleType.Motorcycle => MotorcycleRatePerHour,
             VehicleType.Car => CarRatePerHour,
             VehicleType.SUV => SuvRatePerHour,
             _ => 0
         };
-
-        decimal baseFee = billableHours * hourlyRate;
-
-        // Apply Daily Cap per vehicle type
-        decimal dailyCap = vehicleType switch
+        decimal cap = vehicleType switch
         {
             VehicleType.Motorcycle => MotorcycleDailyCap,
             VehicleType.Car => CarDailyCap,
@@ -100,67 +93,41 @@ public class ParkingFeeCalculator
             _ => decimal.MaxValue
         };
 
-        if (baseFee > dailyCap) baseFee = dailyCap;
+        decimal baseFee = Math.Min(billableHours * rate, cap);
 
-        // Right now, we haven't implemented Overnight, Surcharges, or Discounts yet.
-        // So for the current 8-commit state, we return this:
-        return new ParkingFeeResult
-        {
-            BaseFee = baseFee,
-            TotalFee = baseFee
-        };
+        // 5. Overnight Fee
+        decimal overnight = (checkOut.Hour >= OvernightHourThreshold || checkOut.Date > checkIn.Date)
+            ? OvernightFlatFee : 0;
 
-        decimal overnightFee = 0;
-        // Step 5: Overnight (+2,000 KHR if spans past 22:00)
-        if (checkOut.Hour >= OvernightHourThreshold || (checkOut.Date > checkIn.Date))
-        {
-            overnightFee = OvernightFlatFee;
-        }
-
-        // Step 6: Surcharge (Weekend +20% OR Holiday +50%)
+        // 6. Surcharge
         bool isWeekend = checkIn.DayOfWeek == DayOfWeek.Saturday || checkIn.DayOfWeek == DayOfWeek.Sunday;
-        decimal surchargeRate = 0;
-        if (isHoliday) surchargeRate = HolidaySurchargeRate;
-        else if (isWeekend) surchargeRate = WeekendSurchargeRate;
-
+        decimal surchargeRate = isHoliday ? HolidaySurchargeRate : (isWeekend ? WeekendSurchargeRate : 0);
         decimal surcharge = baseFee * surchargeRate;
 
-        // Step 7: Membership Discount
-        decimal discountRate = membership switch
+        // 7. Discount
+        decimal discRate = membership switch
         {
             MembershipTier.Silver => SilverDiscountRate,
             MembershipTier.Gold => GoldDiscountRate,
             MembershipTier.Platinum => PlatinumDiscountRate,
             _ => 0
         };
+        decimal discount = (baseFee + surcharge) * discRate;
 
-        decimal discount = (baseFee + surcharge) * discountRate;
-
-        // Step 9: Final Total
-        decimal finalTotal = baseFee + surcharge - discount + overnightFee + penalty;
-
-        return new ParkingFeeResult
-        {
-            BaseFee = baseFee,
-            SurchargeFee = surcharge,
-            DiscountAmount = discount,
-            OvernightFee = overnightFee,
-            PenaltyFee = penalty,
-            TotalFee = Math.Max(0, finalTotal) // Rule 9: Min 0
-        };
-
-        // Step 8: Lost ticket penalty
+        // 8. Lost Ticket
         decimal penalty = isLostTicket ? LostTicketPenalty : 0;
 
-        // Final Total Update
-        decimal finalTotal = baseFee + overnightFee + penalty;
+        // 9. Total
+        decimal total = baseFee + surcharge - discount + overnight + penalty;
 
         return new ParkingFeeResult
         {
             BaseFee = baseFee,
-            OvernightFee = overnightFee,
-            PenaltyFee = penalty,
-            TotalFee = finalTotal
+            SurchargeAmount = surcharge,
+            DiscountAmount = discount,
+            LostTicketPenalty = penalty,
+            TotalFee = Math.Max(0, total),
+            Breakdown = $"Base: {baseFee}, Surcharge: {surcharge}, Discount: {discount}, Overnight: {overnight}, Penalty: {penalty}"
         };
     }
 }
