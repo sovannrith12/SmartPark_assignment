@@ -121,5 +121,19 @@ public class ParkingFeeCalculator
             OvernightFee = overnightFee,
             TotalFee = finalTotal
         };
+
+        // Step 8: Lost ticket penalty
+        decimal penalty = isLostTicket ? LostTicketPenalty : 0;
+
+        // Final Total Update
+        decimal finalTotal = baseFee + overnightFee + penalty;
+
+        return new ParkingFeeResult
+        {
+            BaseFee = baseFee,
+            OvernightFee = overnightFee,
+            PenaltyFee = penalty,
+            TotalFee = finalTotal
+        };
     }
 }
